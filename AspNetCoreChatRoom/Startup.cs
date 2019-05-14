@@ -8,6 +8,10 @@ namespace AspNetCoreChatRoom
 {
     public class Startup
     {
+
+        public IConfigurationRoot Configuration { get; }
+
+
         public Startup(IHostingEnvironment env)
         {
             var builder = new ConfigurationBuilder()
@@ -15,10 +19,9 @@ namespace AspNetCoreChatRoom
                 .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
                 .AddJsonFile($"appsettings.{env.EnvironmentName}.json", optional: true)
                 .AddEnvironmentVariables();
+
             Configuration = builder.Build();
         }
-
-        public IConfigurationRoot Configuration { get; }
 
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
@@ -45,15 +48,17 @@ namespace AspNetCoreChatRoom
 
             app.UseStaticFiles();
 
-app.UseWebSockets();
-app.UseMiddleware<ChatWebSocketMiddleware>();
+            app.UseWebSockets();
+            app.UseMiddleware<ChatWebSocketMiddleware>();
 
-app.UseMvc(routes =>
-{
-    routes.MapRoute(
-        name: "default",
-        template: "{controller=Home}/{action=Index}/{id?}");
-});
+            app.UseMvc(routes =>
+            {
+                routes.MapRoute(
+                    name: "default",
+                    template: "{controller=Home}/{action=Index}/{id?}");
+            });
         }
+
+
     }
 }

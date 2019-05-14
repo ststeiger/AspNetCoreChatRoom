@@ -1,26 +1,29 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.IO;
+﻿
 using System.Net.WebSockets;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
+
 
 namespace AspNetCoreChatRoom
 {
+
+
     public class ChatWebSocketMiddleware
     {
-        private static ConcurrentDictionary<string, WebSocket> _sockets = new ConcurrentDictionary<string, WebSocket>();
 
-        private readonly RequestDelegate _next;
+        private static System.Collections.Concurrent.ConcurrentDictionary<string, WebSocket> _sockets = 
+            new System.Collections.Concurrent.ConcurrentDictionary<string, WebSocket>();
 
-        public ChatWebSocketMiddleware(RequestDelegate next)
+        private readonly Microsoft.AspNetCore.Http.RequestDelegate _next;
+
+
+
+        public ChatWebSocketMiddleware(Microsoft.AspNetCore.Http.RequestDelegate next)
         {
             _next = next;
-        }
+        } // End Constructor 
 
-        public async Task Invoke(HttpContext context)
+
+
+        public async System.Threading.Tasks.Task Invoke(Microsoft.AspNetCore.Http.HttpContext context)
         {
             if (!context.WebSockets.IsWebSocketRequest)
             {
@@ -28,9 +31,9 @@ namespace AspNetCoreChatRoom
                 return;
             }
 
-            CancellationToken ct = context.RequestAborted;
+            System.Threading.CancellationToken ct = context.RequestAborted;
             WebSocket currentSocket = await context.WebSockets.AcceptWebSocketAsync();
-            var socketId = Guid.NewGuid().ToString();
+            string socketId = System.Guid.NewGuid().ToString();
 
             _sockets.TryAdd(socketId, currentSocket);
 
@@ -41,10 +44,10 @@ namespace AspNetCoreChatRoom
                     break;
                 }
 
-                var response = await ReceiveStringAsync(currentSocket, ct);
+                string response = await ReceiveStringAsync(currentSocket, ct);
                 if(string.IsNullOrEmpty(response))
                 {
-                    if(currentSocket.State != WebSocketState.Open)
+                    if(currentSocket.State != System.Net.WebSockets.WebSocketState.Open)
                     {
                         break;
                     }
@@ -52,9 +55,9 @@ namespace AspNetCoreChatRoom
                     continue;
                 }
 
-                foreach (var socket in _sockets)
+                foreach (System.Collections.Generic.KeyValuePair<string, WebSocket> socket in _sockets)
                 {
-                    if(socket.Value.State != WebSocketState.Open)
+                    if(socket.Value.State != System.Net.WebSockets.WebSocketState.Open)
                     {
                         continue;
                     }
@@ -66,44 +69,67 @@ namespace AspNetCoreChatRoom
             WebSocket dummy;
             _sockets.TryRemove(socketId, out dummy);
 
-            await currentSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", ct);
+            await currentSocket.CloseAsync(System.Net.WebSockets.WebSocketCloseStatus.NormalClosure, "Closing", ct);
             currentSocket.Dispose();
+        } // End Sub Invoke 
+
+
+
+
+        private static System.Threading.Tasks.Task SendStringAsync(
+            WebSocket socket, string data, System.Threading.CancellationToken ct)
+        {
+            byte[] buffer = System.Text.Encoding.UTF8.GetBytes(data);
+            System.ArraySegment<byte> segment = new System.ArraySegment<byte>(buffer);
+
+            return socket.SendAsync(segment, System.Net.WebSockets.WebSocketMessageType.Text, true, ct);
         }
 
-        private static Task SendStringAsync(WebSocket socket, string data, CancellationToken ct = default(CancellationToken))
+
+        private static System.Threading.Tasks.Task SendStringAsync(WebSocket socket, string data)
         {
-            var buffer = Encoding.UTF8.GetBytes(data);
-            var segment = new ArraySegment<byte>(buffer);
-            return socket.SendAsync(segment, WebSocketMessageType.Text, true, ct);
+            return SendStringAsync(socket, data, default(System.Threading.CancellationToken));
         }
 
-        private static async Task<string> ReceiveStringAsync(WebSocket socket, CancellationToken ct = default(CancellationToken))
+
+        private static async System.Threading.Tasks.Task<string> ReceiveStringAsync(
+            WebSocket socket, System.Threading.CancellationToken ct)
         {
-            var buffer = new ArraySegment<byte>(new byte[8192]);
-            using (var ms = new MemoryStream())
+            System.ArraySegment<byte> buffer = new System.ArraySegment<byte>(new byte[8192]);
+            using (System.IO.MemoryStream ms = new System.IO.MemoryStream())
             {
-                WebSocketReceiveResult result;
+                System.Net.WebSockets.WebSocketReceiveResult result;
                 do
                 {
                     ct.ThrowIfCancellationRequested();
 
                     result = await socket.ReceiveAsync(buffer, ct);
                     ms.Write(buffer.Array, buffer.Offset, result.Count);
-                }
-                while (!result.EndOfMessage);
+                } while (!result.EndOfMessage);
 
-                ms.Seek(0, SeekOrigin.Begin);
-                if (result.MessageType != WebSocketMessageType.Text)
+                ms.Seek(0, System.IO.SeekOrigin.Begin);
+                if (result.MessageType != System.Net.WebSockets.WebSocketMessageType.Text)
                 {
                     return null;
                 }
 
                 // Encoding UTF8: https://tools.ietf.org/html/rfc6455#section-5.6
-                using (var reader = new StreamReader(ms, Encoding.UTF8))
+                using (System.IO.TextReader reader = new System.IO.StreamReader(ms, System.Text.Encoding.UTF8))
                 {
                     return await reader.ReadToEndAsync();
                 }
             }
         }
+
+
+        private static async System.Threading.Tasks.Task<string> ReceiveStringAsync(
+            WebSocket socket)
+        {
+            return await ReceiveStringAsync(socket, default(System.Threading.CancellationToken));
+        }
+
+
     }
+
+
 }
